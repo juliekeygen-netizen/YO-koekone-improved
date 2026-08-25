@@ -228,9 +228,6 @@ Both extension directories are self-contained. Enable only one YO+ distribution 
 ## Store publication material
 
 - Privacy Policy: `PRIVACY.md`
-- Chrome/Firefox listing text, permission answers and screenshot plan: `docs/STORE_SUBMISSION.md`
-- Firefox AMO reviewer build instructions: `docs/AMO_SOURCE_BUILD.md`
-- v0.7.6 audit: `docs/AUDIT_V076.md`
 
 The store listing must remain explicit that YO+ is unofficial and not affiliated with or endorsed by Yle.
 
@@ -292,15 +289,3 @@ runtime -> i18n -> i18n-nondom -> settings -> settings-bridge ->
 settings-effects -> question-sets -> new-tabs -> subtask-links -> core ->
 title-sync -> study-hub -> ui-customizations -> draft-ui -> drafts -> answer-sync
 ```
-
-Do not hand-edit generated distributions. Use:
-
-```bash
-npm run build
-npm test
-npm run check
-```
-
-- final Chrome Web Store / Firefox AMO signing and publisher-account submission are outside repository automation.
-
-See `docs/TESTING.md` for the live browser regression matrix and `docs/AUDIT_V076.md` for the current focused audit. Release-specific changes are in `CHANGELOG.md`.
