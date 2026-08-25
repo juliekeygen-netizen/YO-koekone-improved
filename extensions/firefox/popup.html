@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>YO+</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header><div class="mark">YO+</div><div><h1>YO+</h1><p>Abitreenit-apuri</p></div></header>
+    <section class="toggles">
+      <label><span>Harjoittelun pikavalinnat<small>Jatka, viimeksi avatut ja suosikit</small></span><input type="checkbox" data-setting="studyHub"></label>
+      <label><span>Paikalliset luonnokset<small>Suojaa tarkistamattomat vastaukset</small></span><input type="checkbox" data-setting="localDrafts"></label>
+      <label><span>Luonnoksen tila<small>Näytä tallennusmerkintä tehtävissä</small></span><input type="checkbox" data-setting="draftStatus" data-draft-dependent></label>
+      <label><span>Välilehtivaroitukset<small>Varoita samasta tarkistetusta vastauksesta</small></span><input type="checkbox" data-setting="crossTabWarnings"></label>
+    </section>
+    <footer>
+      <button type="button" id="options">Kaikki asetukset</button>
+      <a href="https://github.com/juliekeygen-netizen/YO-koekone-improved" target="_blank" rel="noreferrer">GitHub</a>
+    </footer>
+  </main>
+  <script src="settings-store.js"></script>
+  <script src="i18n.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
