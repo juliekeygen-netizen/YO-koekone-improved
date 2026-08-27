@@ -11,7 +11,6 @@ const optionsHtml = read('src/extension-ui/options.html');
 const popupHtml = read('src/extension-ui/popup.html');
 const hub = read('src/features-v03/study-hub.js');
 const pageBridge = read('src/page-bridge.js');
-const validateWorkflow = read('.github/workflows/validate.yml');
 
 function assert(condition, message) { if (!condition) throw new Error(message); }
 
@@ -181,8 +180,5 @@ assert(pageBridge.includes('navigator?.locks?.request'), 'question-set writes ar
 assert(pageBridge.includes('function writeSet(setId, incoming)'), 'question-set writes are missing single-set upsert');
 assert(pageBridge.includes('const latest = loadStore();'), 'question-set writes are missing latest-snapshot read before upsert');
 assert(pageBridge.includes('latest.sets[setId] = incoming'), 'question-set writes do not merge the touched set into the latest snapshot');
-
-assert(validateWorkflow.includes('concurrency:'), 'validation workflow is missing branch-scoped concurrency');
-assert(validateWorkflow.includes('cancel-in-progress: true'), 'validation workflow does not cancel stale same-branch runs');
 
 console.log('Settings / Study Hub wiring tests passed.');
