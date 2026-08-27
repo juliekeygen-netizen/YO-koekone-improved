@@ -1,0 +1,140 @@
+name: One-time YO+ 1.0.1 store fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-test:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Apply v1.0.1 source and store-review fixes
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const read = path => fs.readFileSync(path, 'utf8');
+          const write = (path, value) => fs.writeFileSync(path, value.replace(/\r\n/g, '\n'), 'utf8');
+          const replaceExact = (path, from, to, label = path) => {
+            const source = read(path);
+            if (!source.includes(from)) throw new Error(`Expected ${label} source was not found`);
+            write(path, source.replace(from, to));
+          };
+
+          // Release version: package.json is the source of truth for both browser
+          // manifests, generated bundles and the Tampermonkey @version header.
+          const pkg = JSON.parse(read('package.json'));
+          if (pkg.version !== '1.0.0' && pkg.version !== '1.0.1') throw new Error(`Unexpected package version ${pkg.version}`);
+          pkg.version = '1.0.1';
+          write('package.json', JSON.stringify(pkg, null, 2) + '\n');
+
+          let changelog = read('CHANGELOG.md');
+          if (!/^## 1\.0\.1\b/m.test(changelog)) {
+            changelog = `## 1.0.1\n\n- Fixed Firefox AMO compatibility metadata and removed dynamic innerHTML assignments flagged by AMO.\n- Included the final Options-layout and fast-Tarkista status-order fixes.\n\n${changelog.trimStart()}`;
+          }
+          write('CHANGELOG.md', changelog.trimEnd() + '\n');
+
+          // Firefox for Android gained support for the manifest privacy declaration
+          // in 142. Using the same minimum for the package removes AMO's compatibility
+          // warning instead of shipping a declaration unsupported by the stated floor.
+          replaceExact('scripts/build.mjs', "strict_min_version: '140.0'", "strict_min_version: '142.0'", 'Firefox minimum version in build source');
+
+          // Build the language selector entirely with DOM APIs. All text is static
+          // YO+ UI and translation still runs over the finished owned subtree.
+          {
+            const path = 'src/i18n.js';
+            let source = read(path);
+            const start = source.indexOf('  function makeLanguageSection(kind) {');
+            const end = source.indexOf('  function injectPageSettingsLanguage() {', start);
+            if (start < 0 || end < 0) throw new Error('makeLanguageSection block was not found');
+            const replacement = `  function makeLanguageSection(kind) {\n    const section = document.createElement('section');\n    section.dataset.yoplusI18nOwned = '1';\n    section.dataset.yoplusLanguageSection = kind;\n    if (kind === 'options') section.className = 'featured';\n\n    const heading = document.createElement(kind === 'options' ? 'h2' : 'h3');\n    heading.textContent = 'Kieli';\n\n    const label = document.createElement('label');\n    const copy = document.createElement('span');\n    const title = document.createElement('b');\n    title.textContent = 'Käyttöliittymän kieli';\n    const description = document.createElement('small');\n    description.textContent = 'Muuttaa vain YO+:n lisäämät tekstit. Ylen sivun sisältöä ei käännetä.';\n    copy.append(title, description);\n\n    const select = document.createElement('select');\n    select.className = 'yoplus-language-select';\n    select.dataset.yoplusLanguageSelect = '';\n    select.setAttribute('aria-label', 'Käyttöliittymän kieli');\n    for (const [value, text] of [['fi', 'Suomi'], ['en', 'English'], ['sv', 'Svenska']]) {\n      const option = document.createElement('option');\n      option.value = value;\n      option.textContent = text;\n      select.appendChild(option);\n    }\n\n    select.value = currentLanguage;\n    select.addEventListener('change', () => setLanguage(select.value));\n    label.append(copy, select);\n    section.append(heading, label);\n    return section;\n  }\n\n`;
+            source = source.slice(0, start) + replacement + source.slice(end);
+            write(path, source);
+          }
+
+          // Study Hub markup already escapes every Yle/storage-derived string before
+          // it enters the markup. Parse that escaped, inert fragment instead of using
+          // an innerHTML assignment so AMO no longer reports the assignment sink.
+          {
+            const path = 'src/features-v03/study-hub.js';
+            let source = read(path);
+            const escapeBlock = `  function escapeHtml(value) {\n    return String(value ?? '').replace(/[&<>\"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[char]));\n  }\n`;
+            if (!source.includes(escapeBlock)) throw new Error('Study Hub escapeHtml block was not found');
+            const helper = `${escapeBlock}\n  function replaceEscapedMarkup(target, markup) {\n    const parser = new DOMParser();\n    const parsed = parser.parseFromString(\`<body>\${markup}</body>\`, 'text/html');\n    const fragment = document.createDocumentFragment();\n    for (const node of [...parsed.body.childNodes]) fragment.appendChild(document.importNode(node, true));\n    target.replaceChildren(fragment);\n  }\n`;
+            source = source.replace(escapeBlock, helper);
+            if (!source.includes('      hub.innerHTML = hubMarkup(library, recentLimit);')) throw new Error('Study Hub dynamic innerHTML assignment was not found');
+            source = source.replace('      hub.innerHTML = hubMarkup(library, recentLimit);', '      replaceEscapedMarkup(hub, hubMarkup(library, recentLimit));');
+
+            const oldFavorite = `    const favorite = isFavorite(entry);\n    const html = \`\${starSvg(favorite)}<span>\${favorite ? 'Poista suosikeista' : 'Lisää suosikiksi'}</span>\`;\n    if (button.innerHTML !== html) button.innerHTML = html;\n    button.setAttribute('aria-pressed', String(favorite));`;
+            const newFavorite = `    const favorite = isFavorite(entry);\n    let svg = button.querySelector('svg');\n    let label = button.querySelector('span');\n    if (!svg || !label) {\n      const ns = 'http://www.w3.org/2000/svg';\n      svg = document.createElementNS(ns, 'svg');\n      svg.setAttribute('viewBox', '0 0 24 24');\n      svg.setAttribute('width', '1em');\n      svg.setAttribute('height', '1em');\n      svg.setAttribute('aria-hidden', 'true');\n      const path = document.createElementNS(ns, 'path');\n      path.setAttribute('d', 'm12 2.7 2.83 5.74 6.34.92-4.59 4.47 1.08 6.31L12 17.16l-5.66 2.98 1.08-6.31-4.59-4.47 6.34-.92L12 2.7Z');\n      path.setAttribute('stroke-width', '1.8');\n      path.setAttribute('stroke-linejoin', 'round');\n      svg.appendChild(path);\n      label = document.createElement('span');\n      button.replaceChildren(svg, label);\n    }\n    const starPath = svg.querySelector('path');\n    if (starPath) {\n      starPath.setAttribute('fill', favorite ? '#f5c84c' : 'none');\n      starPath.setAttribute('stroke', favorite ? '#f5c84c' : 'currentColor');\n    }\n    label.textContent = favorite ? 'Poista suosikeista' : 'Lisää suosikiksi';\n    button.setAttribute('aria-pressed', String(favorite));`;
+            if (!source.includes(oldFavorite)) throw new Error('Favorite dynamic innerHTML block was not found');
+            source = source.replace(oldFavorite, newFavorite);
+            write(path, source);
+          }
+
+          // Keep reviewer-facing docs and release invariants aligned.
+          for (const path of ['README.md', 'extensions/README.md']) {
+            let source = read(path).replace(/Firefox 140\+/g, 'Firefox 142+');
+            write(path, source);
+          }
+
+          {
+            const path = 'scripts/test-repo-health.mjs';
+            let source = read(path).replace(/'140\.0'/g, "'142.0'");
+            const marker = "assert(buildScript.includes(\"strict_min_version: '142.0'\"), 'build would regenerate an outdated Firefox minimum');";
+            if (!source.includes(marker)) {
+              const insertBefore = "\nconst forbiddenExtensions = new Set(['.har', '.crx', '.xpi']);";
+              if (!source.includes(insertBefore)) throw new Error('repo-health insertion point was not found');
+              source = source.replace(insertBefore, `\nassert(buildScript.includes(\"strict_min_version: '142.0'\"), 'build would regenerate an outdated Firefox minimum');\nassert(!i18n.includes('section.innerHTML ='), 'language selector regressed to a dynamic innerHTML assignment');\nassert(!studyHub.includes('hub.innerHTML ='), 'Study Hub regressed to a dynamic innerHTML assignment');\nassert(!studyHub.includes('button.innerHTML'), 'Favorite control regressed to a dynamic innerHTML assignment');\n${insertBefore}`);
+            }
+            write(path, source);
+          }
+          NODE
+
+      - name: Regenerate Chrome, Firefox and Tampermonkey builds
+        run: npm run build
+
+      - name: Run complete validation
+        run: npm run check
+
+      - name: Verify release-facing version and warning fixes
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const chrome = JSON.parse(fs.readFileSync('extensions/chrome/manifest.json', 'utf8'));
+          const firefox = JSON.parse(fs.readFileSync('extensions/firefox/manifest.json', 'utf8'));
+          const userscript = fs.readFileSync('YO-koekone-improved.user.js', 'utf8');
+          const i18n = fs.readFileSync('extensions/firefox/i18n.js', 'utf8');
+          const content = fs.readFileSync('extensions/firefox/content.js', 'utf8');
+          if (pkg.version !== '1.0.1' || chrome.version !== '1.0.1' || firefox.version !== '1.0.1') throw new Error('Browser/package versions are not all 1.0.1');
+          if (!/^\/\/ @version\s+1\.0\.1$/m.test(userscript)) throw new Error('Tampermonkey @version is not 1.0.1');
+          if (firefox.browser_specific_settings?.gecko?.strict_min_version !== '142.0') throw new Error('Firefox minimum version is not 142.0');
+          if (i18n.includes('section.innerHTML =')) throw new Error('Firefox i18n still contains the flagged innerHTML assignment');
+          if (content.includes('hub.innerHTML =') || content.includes('button.innerHTML')) throw new Error('Firefox content bundle still contains a flagged dynamic innerHTML assignment');
+          console.log('v1.0.1 release-facing checks passed.');
+          NODE
+
+      - name: Commit verified v1.0.1 and remove one-time workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/release-1.0.1-fix.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "release: YO+ 1.0.1 store fixes"
+          git push
