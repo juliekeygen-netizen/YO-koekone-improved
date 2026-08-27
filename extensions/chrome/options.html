@@ -25,26 +25,32 @@
         <div class="number-row" data-home-dependent><span><b>Viimeksi avattuja</b><small>Rivien kokonaismäärä kokeista ja kysymysharjoittelusta.</small></span><input type="number" min="1" max="10" step="1" data-number="recentLimit"></div>
       </section>
 
-      <section><h2>Vastaukset ja luonnokset</h2>
-        <label><span><b>Paikallinen luonnostallennus</b><small>Suojaa tarkistamattomat vastaukset tässä välilehdessä.</small></span><input type="checkbox" data-setting="localDrafts"></label>
-        <label data-draft-dependent><span><b>Luonnoksen tilamerkintä</b><small>Näytä paikallisen tallennuksen tila tehtävän yhteydessä.</small></span><input type="checkbox" data-setting="draftStatus"></label>
-        <label><span><b>Välilehtiristiriitojen varoitus</b><small>Varoita, jos sama tarkistettu vastaus muuttuu toisessa välilehdessä.</small></span><input type="checkbox" data-setting="crossTabWarnings"></label>
-        <p class="info-note">Yksittäisen paikallisen luonnoksen poistaminen tehdään Yo-koekoneessa tehtävän tilamerkistä valinnalla <b>Poista paikallinen luonnos</b>. Se poistaa vain tämän lisäosan turvakopion eikä tyhjennä ruudulla näkyvää vastausta tai Ylen tarkistettua vastausta.</p>
-      </section>
+      <div class="options-columns">
+        <div class="options-column">
+<section><h2>Vastaukset ja luonnokset</h2>
+  <label><span><b>Paikallinen luonnostallennus</b><small>Suojaa tarkistamattomat vastaukset tässä välilehdessä.</small></span><input type="checkbox" data-setting="localDrafts"></label>
+  <label data-draft-dependent><span><b>Luonnoksen tilamerkintä</b><small>Näytä paikallisen tallennuksen tila tehtävän yhteydessä.</small></span><input type="checkbox" data-setting="draftStatus"></label>
+  <label><span><b>Välilehtiristiriitojen varoitus</b><small>Varoita, jos sama tarkistettu vastaus muuttuu toisessa välilehdessä.</small></span><input type="checkbox" data-setting="crossTabWarnings"></label>
+  <p class="info-note">Yksittäisen paikallisen luonnoksen poistaminen tehdään Yo-koekoneessa tehtävän tilamerkistä valinnalla <b>Poista paikallinen luonnos</b>. Se poistaa vain tämän lisäosan turvakopion eikä tyhjennä ruudulla näkyvää vastausta tai Ylen tarkistettua vastausta.</p>
+</section>
 
-      <section><h2>Kokeet ja tehtävät</h2>
-        <label><span><b>Tarkat osatehtävälinkit</b><small>Mahdollistaa suorat reitit kuten tehtava-1.2, kun osatehtävä voidaan tunnistaa varmasti.</small></span><input type="checkbox" data-setting="subtaskLinks"></label>
-      </section>
+<section><h2>Kokeet ja tehtävät</h2>
+  <label><span><b>Tarkat osatehtävälinkit</b><small>Mahdollistaa suorat reitit kuten tehtava-1.2, kun osatehtävä voidaan tunnistaa varmasti.</small></span><input type="checkbox" data-setting="subtaskLinks"></label>
+</section>
+        </div>
 
-      <section><h2>Kysymysharjoittelu</h2>
-        <label><span><b>Palauta sama satunnainen kysymyssarja</b><small>Säilyttää valitun kysymyssarjan F5:n ja historian jälkeen turvallisesti. Sekoita luo uuden sarjan.</small></span><input type="checkbox" data-setting="exactQuestionSetRestore"></label>
-      </section>
+        <div class="options-column">
+<section><h2>Kysymysharjoittelu</h2>
+  <label><span><b>Palauta sama satunnainen kysymyssarja</b><small>Säilyttää valitun kysymyssarjan F5:n ja historian jälkeen turvallisesti. Sekoita luo uuden sarjan.</small></span><input type="checkbox" data-setting="exactQuestionSetRestore"></label>
+</section>
 
-      <section><h2>Sivun siistiminen</h2>
-        <label><span><b>Piilota “Miten Yo-koekone toimii?”</b><small>Piilota etusivun ohjekortti.</small></span><input type="checkbox" data-setting="hideHowItWorks"></label>
-        <label><span><b>Piilota kirjautumisohjeteksti</b><small>Piilota “Jotta saat harjoittelusta kaiken irti…” -kappale.</small></span><input type="checkbox" data-setting="hideLoginIntro"></label>
-        <label><span><b>Piilota kokeen infokortti</b><small>Piilota YTL:n kokeen asettelua koskeva infokortti.</small></span><input type="checkbox" data-setting="hideExamDisclaimer"></label>
-      </section>
+<section><h2>Sivun siistiminen</h2>
+  <label><span><b>Piilota “Miten Yo-koekone toimii?”</b><small>Piilota etusivun ohjekortti.</small></span><input type="checkbox" data-setting="hideHowItWorks"></label>
+  <label><span><b>Piilota kirjautumisohjeteksti</b><small>Piilota “Jotta saat harjoittelusta kaiken irti…” -kappale.</small></span><input type="checkbox" data-setting="hideLoginIntro"></label>
+  <label><span><b>Piilota kokeen infokortti</b><small>Piilota YTL:n kokeen asettelua koskeva infokortti.</small></span><input type="checkbox" data-setting="hideExamDisclaimer"></label>
+</section>
+        </div>
+      </div>
     </div>
 
     <footer>

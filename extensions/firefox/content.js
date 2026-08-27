@@ -5294,7 +5294,21 @@
     // React remounts that row, move our existing UI instead of creating a second
     // line above it. Fall back beside node-review only until the action row mounts.
     if (actionRow) {
-      if (row.parentElement !== actionRow) actionRow.appendChild(row);
+      // React can add Muokkaa after this status row already exists. Re-evaluate
+      // native action order on every render instead of checking only the parent.
+      const nativeButtons = [...actionRow.querySelectorAll('button')].filter(button =>
+        button.closest(SELECTORS.question) === q && !button.closest(`.${ROW_CLASS}`)
+      );
+      const editButton = nativeButtons.find(button =>
+        button.matches?.(SELECTORS.edit) ||
+        /^Muokkaa$/i.test(String(button.getAttribute('aria-label') || button.textContent || '').trim())
+      );
+      const anchor = editButton || nativeButtons[nativeButtons.length - 1] || null;
+      if (anchor) {
+        if (anchor.nextSibling !== row) anchor.after(row);
+      } else if (actionRow.lastElementChild !== row) {
+        actionRow.appendChild(row);
+      }
     } else {
       const review = findReviewNode(q);
       if (review?.parentElement && row.parentElement !== review.parentElement) {

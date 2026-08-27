@@ -93,11 +93,11 @@ Folder: `extensions/firefox`
 2. Choose **Load Temporary Add-on...**.
 3. Select `extensions/firefox/manifest.json`.
 
-Firefox uses the same local runtime and background helper. The stable Gecko ID is preserved for signing/update continuity, Firefox 128+ is required by the packaged MAIN-world bridge, and the manifest declares `data_collection_permissions.required: ["none"]`.
+Firefox uses the same local runtime and background helper. The stable Gecko ID is preserved for signing/update continuity, Firefox 140+ is required by the packaged extension, and the manifest declares `data_collection_permissions.required: ["none"]`.
 
 A temporary add-on disappears when Firefox restarts. Permanent normal installation requires a signed package / AMO distribution unless the Firefox build/policy allows unsigned add-ons.
 
-For AMO source review, see `../docs/AMO_SOURCE_BUILD.md`.
+For AMO/source review build instructions, see the **Source review / build** section in `../README.md`.
 
 ## Language behavior
 
@@ -136,6 +136,4 @@ DOM/runtime guards protect against accidental double activation, but one distrib
 ## Store material
 
 - Privacy Policy: `../PRIVACY.md`
-- store copy / screenshot checklist: `../docs/STORE_SUBMISSION.md`
-- AMO source/build notes: `../docs/AMO_SOURCE_BUILD.md`
-- current audit: `../docs/AUDIT_V070.md`
+- source/build review instructions: `../README.md`

@@ -34,7 +34,7 @@ The repository/technical identifiers intentionally still use `YO-koekone-improve
 
 ## Languages
 
-YO+ v0.7.0 added an interface language selector:
+YO+ includes an interface language selector:
 
 ```text
 Suomi
@@ -159,7 +159,7 @@ It provides:
 - **Suosikit** — explicitly starred historical exams;
 - **Asetukset** shortcut.
 
-For exam rows, normal left-click on the star still toggles Favorite. Right-clicking that star removes the exam only from **Viimeksi avatut** if it is currently present there. If **Jatka viimeisintä** pointed to the removed exam, YO+ falls to the next newest eligible activity. The Favorite itself is preserved. Right-clicking a Favorite-only entry that is no longer in Recent does not mutate YO+ data. v0.7.2 hardens this gesture for Tampermonkey/content-script cross-realm DOM events by using `composedPath()` rather than `instanceof Element`.
+For exam rows, normal left-click on the star still toggles Favorite. Right-clicking that star removes the exam only from **Viimeksi avatut** if it is currently present there. If **Jatka viimeisintä** pointed to the removed exam, YO+ falls to the next newest eligible activity. The Favorite itself is preserved. Right-clicking a Favorite-only entry that is no longer in Recent does not mutate YO+ data. The gesture is hardened for Tampermonkey/content-script cross-realm DOM events by using `composedPath()` rather than realm-sensitive DOM constructor checks.
 
 Question-practice entries preserve subject, filters, current carousel position and exact saved `set=` id when available. Favorites remain exam shortcuts rather than random question-session bookmarks.
 
@@ -217,7 +217,7 @@ Generated manifest:
 
 Development install: load `extensions/firefox/manifest.json` from `about:debugging#/runtime/this-firefox`.
 
-The existing stable Gecko ID is retained for update/signing continuity. Firefox 128+ is required by the current packaged MAIN-world exact-set bridge. The manifest declares no data collection/transmission outside the extension/browser.
+The existing stable Gecko ID is retained for update/signing continuity. Firefox 140+ is required by the packaged extension so the manifest privacy declaration and supported browser APIs stay aligned. The manifest declares no data collection/transmission outside the extension/browser.
 
 Both extension directories are self-contained. Enable only one YO+ distribution on a page during normal testing/use.
 
@@ -235,7 +235,7 @@ The store listing must remain explicit that YO+ is unofficial and not affiliated
 
 A release tag must exactly match `package.json` as `v<version>`, and the committed tree must already pass `npm run check` before packaging.
 
-GitHub Release artifacts:
+Suggested release artifacts:
 
 ```text
 YO-koekone-improved.user.js
@@ -289,3 +289,22 @@ runtime -> i18n -> i18n-nondom -> settings -> settings-bridge ->
 settings-effects -> question-sets -> new-tabs -> subtask-links -> core ->
 title-sync -> study-hub -> ui-customizations -> draft-ui -> drafts -> answer-sync
 ```
+
+
+## Source review / build
+
+The build uses Node.js built-ins and the committed source tree. For store/source review, use **Node.js 24.x** on Windows, macOS or Linux.
+
+From the repository root:
+
+```bash
+npm run build
+npm run check
+```
+
+`npm run build` regenerates the standalone userscript plus the Chrome and Firefox extension folders. `npm run check` verifies generated/source parity, runs the regression suite and syntax-checks the shipped JavaScript. No minifier, bundler package, remote code download or external npm dependency is required.
+
+
+## Maintenance
+
+YO+ is considered feature-complete for what I wanted it to do, so I probably will not keep adding features just for the sake of it. If a browser update or a major Abitreenit change breaks the extension badly, I may try to fix it. Issues and pull requests are still welcome as reports or suggestions, but I cannot promise a response, a fix, or that a pull request will be merged.
