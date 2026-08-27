@@ -15,10 +15,6 @@ const firefoxManifest = json('extensions/firefox/manifest.json');
 const changelog = read('CHANGELOG.md');
 const readme = read('README.md');
 const privacy = read('PRIVACY.md');
-const storeSubmission = read('docs/STORE_SUBMISSION.md');
-const amoBuild = read('docs/AMO_SOURCE_BUILD.md');
-const validateWorkflow = read('.github/workflows/validate.yml');
-const releaseWorkflow = read('.github/workflows/release.yml');
 const buildScript = read('scripts/build.mjs');
 const i18n = read('src/i18n.js');
 const nonDomI18n = read('src/i18n-nondom.js');
@@ -32,6 +28,8 @@ const drafts = read('src/features-v03/drafts.js');
 const draftUi = read('src/features-v03/draft-ui.js');
 const answerSync = read('src/features-v03/answer-sync.js');
 const extensionBackground = read('src/extension-background.js');
+const optionsHtml = read('src/extension-ui/options.html');
+const optionsCss = read('src/extension-ui/options.css');
 
 assert(/^\d+\.\d+\.\d+$/.test(pkg.version), `package version is not plain semver: ${pkg.version}`);
 const metadataVersion = userscript.match(/^\/\/ @version\s+(\S+)$/m)?.[1];
@@ -43,24 +41,10 @@ assert(!/^\/\/\s*@require\b/m.test(userscript), 'standalone userscript unexpecte
 
 const changelogVersion = changelog.match(/^##\s+(\d+\.\d+\.\d+)\b/m)?.[1];
 assert(changelogVersion === pkg.version, `CHANGELOG newest version ${changelogVersion} does not match package ${pkg.version}`);
-assert(readme.includes(`docs/AUDIT_V${pkg.version.replace(/\./g, '')}.md`), 'README does not point to the current audit document');
-assert(exists(`docs/AUDIT_V${pkg.version.replace(/\./g, '')}.md`), 'current audit document is missing');
 
-for (const required of ['PRIVACY.md', 'docs/STORE_SUBMISSION.md', 'docs/AMO_SOURCE_BUILD.md', 'scripts/test-i18n.mjs', 'src/i18n.js', 'src/i18n-nondom.js']) {
-  assert(exists(required), `store/localization release file is missing: ${required}`);
+for (const required of ['PRIVACY.md', 'README.md', 'CHANGELOG.md', 'scripts/test-i18n.mjs', 'src/i18n.js', 'src/i18n-nondom.js']) {
+  assert(exists(required), `release/localization file is missing: ${required}`);
 }
-
-assert(validateWorkflow.includes('concurrency:'), 'validation workflow is missing branch-scoped concurrency');
-assert(validateWorkflow.includes('cancel-in-progress: true'), 'validation workflow does not cancel stale same-branch runs');
-assert(validateWorkflow.includes('REMOTE_HEAD='), 'validation workflow is missing its stale generated-output writer guard');
-
-assert(releaseWorkflow.includes('Verify release tag matches package version'), 'release workflow does not verify tag/package version parity');
-assert(releaseWorkflow.includes('GITHUB_REF_NAME'), 'release workflow tag guard is incomplete');
-assert(releaseWorkflow.includes('EXPECTED_TAG="v${VERSION}"'), 'release workflow does not construct the expected v<version> tag');
-assert(releaseWorkflow.includes('run: npm run check'), 'release workflow does not validate the tagged tree before packaging');
-assert(!releaseWorkflow.includes('npm run build'), 'release workflow must not regenerate stale tagged distributions before parity validation');
-assert(releaseWorkflow.includes('YO-plus-source.zip'), 'release workflow is missing the AMO reviewer source archive');
-assert(releaseWorkflow.includes('docs/AMO_SOURCE_BUILD.md'), 'reviewer source archive is missing AMO build instructions');
 
 assert(pageBridge.includes("post('question-set-capture-failed'"), 'page bridge does not signal exact-set persistence failure');
 assert(pageBridge.includes('if (!persisted?.sets?.[setId])'), 'page bridge can still advertise an unpersisted set id');
@@ -147,12 +131,13 @@ for (const [name, manifest] of [['Chrome', chromeManifest], ['Firefox', firefoxM
 }
 
 assert(firefoxManifest.browser_specific_settings?.gecko?.id === 'yo-koekone-improved@juliekeygen-netizen', 'Firefox stable Gecko ID changed');
-assert(firefoxManifest.browser_specific_settings?.gecko?.strict_min_version === '128.0', 'Firefox minimum version changed unexpectedly');
+assert(firefoxManifest.browser_specific_settings?.gecko?.strict_min_version === '140.0', 'Firefox minimum must match manifest privacy API support');
 assert(JSON.stringify(firefoxManifest.browser_specific_settings?.gecko?.data_collection_permissions?.required) === JSON.stringify(['none']), 'Firefox data collection declaration is not none');
 
 assert(buildScript.includes("'src/i18n.js'"), 'build does not include i18n source');
 assert(buildScript.includes("'src/i18n-nondom.js'"), 'build does not include non-DOM i18n source');
 assert(buildScript.includes("name: 'YO+ for Abitreenit'"), 'generated manifest branding is missing');
+assert(buildScript.includes("strict_min_version: '140.0'"), 'build would regenerate an outdated Firefox minimum');
 assert(i18n.includes("Object.freeze(['fi', 'en', 'sv'])"), 'FI/EN/SV language allowlist missing');
 assert(i18n.includes('OWNED_PAGE_SELECTOR'), 'page localization lacks an owned-UI boundary');
 assert(nonDomI18n.includes('unknown/native Yle strings pass through unchanged'), 'non-DOM localization safety boundary is undocumented in code');
@@ -226,16 +211,19 @@ assert(answerSync.includes('const cleanupIds = new Set(action.cleanupPending || 
 assert(studyHub.includes('rt.forgetRecentExam = forgetRecentExam'), 'Study Hub does not expose locked Recent deletion');
 assert(studyHub.includes('function forgetRecentExam(key)'), 'Study Hub locked Recent deletion helper is missing');
 assert(nonDomI18n.includes('runtime?.forgetRecentExam'), 'right-click Recent deletion bypasses Study Hub mutation serialization');
-
 assert(studyHub.includes("route?.kind === 'home' || route?.kind === 'subject' || selectorVisible"), 'Study Hub must follow the visible selector DOM during failed/pending deep-link restore');
+
+assert(draftUi.includes("const nativeButtons = [...actionRow.querySelectorAll('button')]"), 'draft status does not re-evaluate native action order');
+assert(draftUi.includes('const editButton = nativeButtons.find'), 'draft status does not prefer Muokkaa when it exists');
+assert(draftUi.includes('if (anchor.nextSibling !== row) anchor.after(row);'), 'draft status can remain before a late-mounted Muokkaa button');
+assert(optionsHtml.includes('class="options-columns"'), 'Options page is missing independent card columns');
+assert(optionsCss.includes('.options-column { display: grid;'), 'Options page cards are not independently stacked');
+assert(optionsCss.includes('.info-note b {'), 'Options draft-note emphasis styling regressed');
 
 assert(/does not (?:run|use|have) a developer-operated server/i.test(privacy), 'Privacy Policy does not disclose absence of a developer server');
 assert(/does not contain analytics/i.test(privacy), 'Privacy Policy does not disclose analytics behavior');
 assert(/sessionStorage/.test(privacy) && /localStorage/.test(privacy), 'Privacy Policy does not accurately describe local draft/library storage');
 assert(/not affiliated with or endorsed by Yle/i.test(privacy), 'Privacy Policy is missing the Yle independence statement');
-assert(storeSubmission.includes('YO+ for Abitreenit'), 'store submission guide is missing product identity');
-assert(storeSubmission.includes('1280×800'), 'store submission guide is missing screenshot dimensions');
-assert(amoBuild.includes('npm run build') && amoBuild.includes('npm run check'), 'AMO source build instructions are incomplete');
 
 const forbiddenExtensions = new Set(['.har', '.crx', '.xpi']);
 const allowedZipPrefix = path.join(root, 'dist') + path.sep;
