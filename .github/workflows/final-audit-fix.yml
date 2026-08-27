@@ -1,0 +1,363 @@
+name: One-time final v1.0 audit fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Apply final audit fixes
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          function read(path) { return fs.readFileSync(path, 'utf8'); }
+          function write(path, value) { fs.writeFileSync(path, value.replace(/\r\n/g, '\n'), 'utf8'); }
+          function replaceExact(path, from, to, label = path) {
+            const source = read(path);
+            if (!source.includes(from)) throw new Error(`Expected ${label} source was not found`);
+            write(path, source.replace(from, to));
+          }
+
+          // Firefox AMO's data_collection_permissions key is supported from Firefox 140.
+          // Keep the generated manifest and source-of-truth build script aligned so a
+          // future npm run build cannot silently reintroduce the old validator warning.
+          replaceExact(
+            'scripts/build.mjs',
+            "strict_min_version: '128.0'",
+            "strict_min_version: '140.0'",
+            'Firefox minimum-version marker in build.mjs'
+          );
+
+          // Draft status must remain AFTER Yle's native action buttons. During a fast
+          // Tarkista transition React can insert Muokkaa after YO+ has already mounted;
+          // merely checking the parent leaves YO+ stranded between Tyhjennä and Muokkaa.
+          replaceExact(
+            'src/features-v03/draft-ui.js',
+            `    if (actionRow) {\n      if (row.parentElement !== actionRow) actionRow.appendChild(row);\n    } else {`,
+            `    if (actionRow) {\n      // React can add Muokkaa after this status row already exists (especially when\n      // Tarkista is clicked immediately). Re-evaluate native action order on every\n      // render and keep YO+ immediately after Muokkaa when present, otherwise after\n      // the last native action button. Exclude buttons inside our own status UI.\n      const nativeButtons = [...actionRow.querySelectorAll('button')].filter(button =>\n        button.closest(SELECTORS.question) === q && !button.closest(\`.\${ROW_CLASS}\`)\n      );\n      const editButton = nativeButtons.find(button =>\n        button.matches?.(SELECTORS.edit) ||\n        /^Muokkaa$/i.test(String(button.getAttribute('aria-label') || button.textContent || '').trim())\n      );\n      const anchor = editButton || nativeButtons[nativeButtons.length - 1] || null;\n      if (anchor) {\n        if (anchor.nextSibling !== row) anchor.after(row);\n      } else if (actionRow.lastElementChild !== row) {\n        actionRow.appendChild(row);\n      }\n    } else {`,
+            'draft status action-row placement block'
+          );
+
+          // Rebuild the full Options page layout. A normal two-column CSS Grid shared
+          // row heights, so the tall draft card forced a large empty hole and made
+          // "Sivun siistiminen" appear misaligned. Independent columns keep cards
+          // compact while preserving a clean single-column mobile layout.
+          const optionsHtml = `<!doctype html>
+          <html lang="fi">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>YO+ – Asetukset</title>
+            <link rel="stylesheet" href="options.css">
+          </head>
+          <body>
+            <main>
+              <header class="hero">
+                <div class="mark">YO+</div>
+                <div>
+                  <p class="eyebrow">YO+</p>
+                  <h1>Asetukset</h1>
+                  <p>Perusparannukset, kuten URL-seuranta, taustavälilehdet ja välilehtien nimet, ovat aina käytössä. Täällä säädetään vain valinnaisia ominaisuuksia.</p>
+                </div>
+              </header>
+
+              <div class="grid">
+                <section class="featured"><h2>Etusivu</h2>
+                  <label><span><b>Harjoittelun pikavalinnat</b><small>Näytä Jatka viimeisintä, viimeksi avatut ja suosikit ennen oppiaineen valintaa.</small></span><input type="checkbox" data-setting="studyHub"></label>
+                  <label data-home-dependent><span><b>Näytä kysymysharjoittelut pikavalinnoissa</b><small>Lisää Harjoittele kysymyksillä -sessiot Jatka- ja Viimeksi avatut -kohtiin.</small></span><input type="checkbox" data-setting="showQuestionPracticeInHub"></label>
+                  <label data-question-session-detail><span><b>Vain yksi kysymysharjoittelusessio</b><small>Näytä viimeksi avatuissa vain uusin kysymyssessio, jotta kokeille jää tilaa.</small></span><input type="checkbox" data-setting="singleQuestionPracticeRecent"></label>
+                  <div class="number-row" data-home-dependent><span><b>Viimeksi avattuja</b><small>Rivien kokonaismäärä kokeista ja kysymysharjoittelusta.</small></span><input type="number" min="1" max="10" step="1" data-number="recentLimit"></div>
+                </section>
+
+                <div class="options-columns">
+                  <div class="options-column">
+                    <section><h2>Vastaukset ja luonnokset</h2>
+                      <label><span><b>Paikallinen luonnostallennus</b><small>Suojaa tarkistamattomat vastaukset tässä välilehdessä.</small></span><input type="checkbox" data-setting="localDrafts"></label>
+                      <label data-draft-dependent><span><b>Luonnoksen tilamerkintä</b><small>Näytä paikallisen tallennuksen tila tehtävän yhteydessä.</small></span><input type="checkbox" data-setting="draftStatus"></label>
+                      <label><span><b>Välilehtiristiriitojen varoitus</b><small>Varoita, jos sama tarkistettu vastaus muuttuu toisessa välilehdessä.</small></span><input type="checkbox" data-setting="crossTabWarnings"></label>
+                      <p class="info-note">Yksittäisen paikallisen luonnoksen poistaminen tehdään Yo-koekoneessa tehtävän tilamerkistä valinnalla <b>Poista paikallinen luonnos</b>. Se poistaa vain tämän lisäosan turvakopion eikä tyhjennä ruudulla näkyvää vastausta tai Ylen tarkistettua vastausta.</p>
+                    </section>
+
+                    <section><h2>Kokeet ja tehtävät</h2>
+                      <label><span><b>Tarkat osatehtävälinkit</b><small>Mahdollistaa suorat reitit kuten tehtava-1.2, kun osatehtävä voidaan tunnistaa varmasti.</small></span><input type="checkbox" data-setting="subtaskLinks"></label>
+                    </section>
+                  </div>
+
+                  <div class="options-column">
+                    <section><h2>Kysymysharjoittelu</h2>
+                      <label><span><b>Palauta sama satunnainen kysymyssarja</b><small>Säilyttää valitun kysymyssarjan F5:n ja historian jälkeen turvallisesti. Sekoita luo uuden sarjan.</small></span><input type="checkbox" data-setting="exactQuestionSetRestore"></label>
+                    </section>
+
+                    <section><h2>Sivun siistiminen</h2>
+                      <label><span><b>Piilota “Miten Yo-koekone toimii?”</b><small>Piilota etusivun ohjekortti.</small></span><input type="checkbox" data-setting="hideHowItWorks"></label>
+                      <label><span><b>Piilota kirjautumisohjeteksti</b><small>Piilota “Jotta saat harjoittelusta kaiken irti…” -kappale.</small></span><input type="checkbox" data-setting="hideLoginIntro"></label>
+                      <label><span><b>Piilota kokeen infokortti</b><small>Piilota YTL:n kokeen asettelua koskeva infokortti.</small></span><input type="checkbox" data-setting="hideExamDisclaimer"></label>
+                    </section>
+                  </div>
+                </div>
+              </div>
+
+              <footer>
+                <div><button id="reset" class="secondary" type="button">Palauta oletukset</button><span id="saved" role="status" aria-live="polite"></span></div>
+                <a href="https://yle.fi/abitreenit/harjoittele" target="_blank" rel="noreferrer">Avaa Yo-koekone</a>
+              </footer>
+            </main>
+            <script src="settings-store.js"></script>
+            <script src="i18n.js"></script>
+            <script src="options.js"></script>
+          </body>
+          </html>
+          `.replace(/^ {10}/gm, '');
+          write('src/extension-ui/options.html', optionsHtml);
+
+          const optionsCss = `:root {
+            color-scheme: dark;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #111214;
+            color: #f4f4f4;
+          }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 75% -10%, rgba(255,142,118,.15), transparent 35%), #111214;
+          }
+          main { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 46px 0 54px; }
+          .hero { display: flex; align-items: flex-start; gap: 17px; margin-bottom: 30px; }
+          .mark { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 13px; background: #ff9a84; color: #111; font-weight: 950; font-size: 20px; flex: none; }
+          .eyebrow { margin: 0 0 3px; color: #ffab9a; font-size: 12px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+          .hero h1 { margin: 0; font-size: 34px; line-height: 1.05; }
+          .hero > div > p:last-child { max-width: 720px; margin: 7px 0 0; color: #aaacae; font-size: 14px; line-height: 1.5; }
+
+          .grid { display: grid; gap: 16px; }
+          .options-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+          .options-column { display: grid; gap: 16px; align-content: start; min-width: 0; }
+          .grid section { min-width: 0; background: #1b1c1e; border: 1px solid #303235; border-radius: 12px; padding: 19px 20px; }
+          .grid h2 { margin: 0 0 7px; font-size: 15px; color: #ffb1a2; }
+          .grid label, .number-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 11px 0; border-top: 1px solid #2e3032; cursor: pointer; }
+          .grid h2 + label, .grid h2 + .number-row { border-top: 0; }
+          .grid label > span, .number-row > span { display: grid; gap: 3px; min-width: 0; }
+          .grid label b, .number-row b { font-size: 13.5px; }
+          .grid small { color: #9ea0a3; font-size: 11.5px; line-height: 1.4; }
+          .grid input[type=checkbox] { appearance: none; width: 38px; height: 21px; border: 0; border-radius: 99px; background: #44474a; position: relative; flex: none; cursor: pointer; }
+          .grid input[type=checkbox]::after { content: ""; position: absolute; left: 2px; top: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; transition: transform .15s ease; }
+          .grid input[type=checkbox]:checked { background: #ff927d; }
+          .grid input[type=checkbox]:checked::after { transform: translateX(17px); }
+          .grid input[type=number] { width: 78px; padding: 8px 9px; border: 1px solid #56585b; border-radius: 8px; background: #111214; color: #fff; font: inherit; }
+          .grid input:disabled { opacity: .42; cursor: not-allowed; }
+          .grid label:has(input:disabled), .number-row:has(input:disabled) { opacity: .55; cursor: default; }
+
+          .info-note {
+            margin: 12px 0 0;
+            padding: 12px 13px;
+            border: 1px solid #343638;
+            border-radius: 9px;
+            background: #151618;
+            color: #b7b9bb;
+            font-size: 12px;
+            line-height: 1.62;
+            overflow-wrap: break-word;
+          }
+          .info-note b { color: #f1f1f1; font-size: inherit; font-weight: 800; }
+
+          .grid input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #ffb1a2; outline-offset: 3px; }
+          footer { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 22px; padding-top: 20px; border-top: 1px solid #303235; }
+          footer > div { display: flex; align-items: center; gap: 13px; }
+          button, a { font: inherit; font-size: 12px; font-weight: 800; }
+          .secondary { border: 1px solid #65676a; border-radius: 999px; padding: 9px 13px; background: transparent; color: #fff; cursor: pointer; }
+          footer a { border-radius: 999px; padding: 10px 14px; background: #f4f4f4; color: #111; text-decoration: none; }
+          #saved { font-size: 11.5px; color: #83c99a; min-width: 85px; }
+
+          @media (max-width: 760px) {
+            main { padding-top: 28px; }
+            .options-columns { grid-template-columns: 1fr; }
+            .hero { align-items: flex-start; }
+            .hero h1 { font-size: 28px; }
+            footer { align-items: flex-start; flex-direction: column; }
+          }
+          `;
+          write('src/extension-ui/options.css', optionsCss);
+
+          // Replace the old CI/docs-coupled repository-health test with a release-tree
+          // health check that matches this intentionally clean public repo.
+          const repoHealth = `import fs from 'node:fs';
+          import path from 'node:path';
+          import zlib from 'node:zlib';
+
+          const root = path.resolve(import.meta.dirname, '..');
+          const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+          const json = file => JSON.parse(read(file));
+          const exists = file => fs.existsSync(path.join(root, file));
+          const assert = (condition, message) => { if (!condition) throw new Error(message); };
+
+          const pkg = json('package.json');
+          const userscript = read('YO-koekone-improved.user.js');
+          const chromeManifest = json('extensions/chrome/manifest.json');
+          const firefoxManifest = json('extensions/firefox/manifest.json');
+          const changelog = read('CHANGELOG.md');
+          const readme = read('README.md');
+          const privacy = read('PRIVACY.md');
+          const buildScript = read('scripts/build.mjs');
+          const core = read('src/core.js');
+          const featureRuntime = read('src/features-v03/runtime.js');
+          const draftUi = read('src/features-v03/draft-ui.js');
+          const optionsHtml = read('src/extension-ui/options.html');
+          const optionsCss = read('src/extension-ui/options.css');
+
+          assert(/^\\d+\\.\\d+\\.\\d+$/.test(pkg.version), \`package version is not plain semver: \${pkg.version}\`);
+          const metadataVersion = userscript.match(/^\\/\\/ @version\\s+(\\S+)$/m)?.[1];
+          assert(metadataVersion === pkg.version, \`userscript version \${metadataVersion} does not match package \${pkg.version}\`);
+          assert(chromeManifest.version === pkg.version, 'Chrome manifest version does not match package');
+          assert(firefoxManifest.version === pkg.version, 'Firefox manifest version does not match package');
+          assert(changelog.match(/^##\\s+(\\d+\\.\\d+\\.\\d+)\\b/m)?.[1] === pkg.version, 'CHANGELOG newest version does not match package');
+
+          for (const required of [
+            'README.md', 'PRIVACY.md', 'CHANGELOG.md', 'scripts/build.mjs',
+            'src/core.js', 'src/page-bridge.js', 'src/features-v03/draft-ui.js',
+            'extensions/chrome/manifest.json', 'extensions/firefox/manifest.json'
+          ]) assert(exists(required), \`release file is missing: \${required}\`);
+
+          assert(readme.includes('npm run build') && readme.includes('npm run check'), 'README is missing source build/verification commands');
+          assert(/does not (?:run|use|have) a developer-operated server/i.test(privacy), 'Privacy Policy does not disclose absence of a developer server');
+          assert(/does not contain analytics/i.test(privacy), 'Privacy Policy does not disclose analytics behavior');
+          assert(/sessionStorage/.test(privacy) && /localStorage/.test(privacy), 'Privacy Policy does not describe local storage accurately');
+          assert(/not affiliated with or endorsed by Yle/i.test(privacy), 'Privacy Policy is missing the Yle independence statement');
+
+          const expectedIconSizes = ['16', '32', '48', '64', '96', '128'];
+          function validateRgbaPng(relative, expectedSize) {
+            const bytes = fs.readFileSync(path.join(root, relative));
+            const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+            assert(bytes.subarray(0, 8).equals(signature), \`\${relative} is not a PNG\`);
+            let offset = 8, width = 0, height = 0, bitDepth = 0, colorType = -1, interlace = -1, sawIend = false;
+            const idat = [];
+            while (offset + 12 <= bytes.length) {
+              const length = bytes.readUInt32BE(offset);
+              const type = bytes.toString('ascii', offset + 4, offset + 8);
+              const start = offset + 8, end = start + length, chunkEnd = end + 4;
+              assert(chunkEnd <= bytes.length, \`\${relative} contains truncated PNG data\`);
+              if (type === 'IHDR') {
+                width = bytes.readUInt32BE(start); height = bytes.readUInt32BE(start + 4);
+                bitDepth = bytes[start + 8]; colorType = bytes[start + 9]; interlace = bytes[start + 12];
+              } else if (type === 'IDAT') idat.push(bytes.subarray(start, end));
+              else if (type === 'IEND') { sawIend = true; offset = chunkEnd; break; }
+              offset = chunkEnd;
+            }
+            assert(width === expectedSize && height === expectedSize, \`\${relative} dimensions are wrong\`);
+            assert(bitDepth === 8 && colorType === 6 && interlace === 0, \`\${relative} must be 8-bit non-interlaced RGBA PNG\`);
+            assert(idat.length && sawIend && offset === bytes.length, \`\${relative} PNG structure is incomplete\`);
+            const inflated = zlib.inflateSync(Buffer.concat(idat));
+            assert(inflated.length === (expectedSize * 4 + 1) * expectedSize, \`\${relative} decoded PNG payload is incomplete\`);
+          }
+
+          for (const size of expectedIconSizes) validateRgbaPng(\`assets/icons/icon-\${size}.png\`, Number(size));
+          for (const [name, manifest, folder] of [
+            ['Chrome', chromeManifest, 'chrome'], ['Firefox', firefoxManifest, 'firefox']
+          ]) {
+            assert(manifest.manifest_version === 3, \`\${name} manifest is not MV3\`);
+            assert(manifest.name === 'YO+ for Abitreenit', \`\${name} manifest name changed\`);
+            assert(JSON.stringify(manifest.permissions) === JSON.stringify(['storage']), \`\${name} permissions unexpectedly expanded\`);
+            assert(!manifest.host_permissions, \`\${name} unexpectedly gained separate host_permissions\`);
+            assert(manifest.content_scripts?.every(item => item.matches?.length === 1 && item.matches[0] === 'https://yle.fi/abitreenit/harjoittele*'), \`\${name} content-script scope broadened\`);
+            for (const size of expectedIconSizes) {
+              assert(manifest.icons?.[size] === \`icons/icon-\${size}.png\`, \`\${name} icon path is wrong for \${size}\`);
+              validateRgbaPng(\`extensions/\${folder}/icons/icon-\${size}.png\`, Number(size));
+            }
+          }
+
+          assert(firefoxManifest.browser_specific_settings?.gecko?.strict_min_version === '140.0', 'Firefox minimum must match data_collection_permissions support');
+          assert(JSON.stringify(firefoxManifest.browser_specific_settings?.gecko?.data_collection_permissions?.required) === JSON.stringify(['none']), 'Firefox data collection declaration is not none');
+          assert(buildScript.includes("strict_min_version: '140.0'"), 'build source would regenerate the old Firefox minimum');
+
+          assert(core.includes("=== 'kevät' ? 'kevat' : 'syksy'"), 'core spring route is not ASCII canonicalized');
+          assert(featureRuntime.includes("=== 'kevät' ? 'kevat' : 'syksy'"), 'runtime spring route is not ASCII canonicalized');
+          assert(core.includes("forceReselect: reason === 'initial-load'"), 'initial deep links do not force subject re-selection');
+          assert(core.includes('const liveInput = examInput();'), 'exam restore does not follow a remounted combobox');
+
+          assert(draftUi.includes('const nativeButtons = [...actionRow.querySelectorAll(\'button\')]'), 'draft status does not re-evaluate native action order');
+          assert(draftUi.includes('!button.closest(\`.\${ROW_CLASS}\`)'), 'draft status native-button scan includes its own controls');
+          assert(draftUi.includes('const editButton = nativeButtons.find'), 'draft status does not explicitly prefer Muokkaa');
+          assert(draftUi.includes('if (anchor.nextSibling !== row) anchor.after(row);'), 'draft status can remain before a late-mounted Muokkaa button');
+
+          assert(optionsHtml.includes('class="options-columns"'), 'Options page is missing independent card columns');
+          assert(optionsCss.includes('.options-column { display: grid;'), 'Options card columns are not independently stacked');
+          assert(optionsCss.includes('.info-note b {'), 'Options draft note emphasis styling regressed');
+
+          const forbiddenExtensions = new Set(['.har', '.crx', '.xpi']);
+          const allowedZipPrefix = path.join(root, 'dist') + path.sep;
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === '.git' || entry.name === 'node_modules') continue;
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full);
+              else {
+                const ext = path.extname(entry.name).toLowerCase();
+                assert(!forbiddenExtensions.has(ext), \`diagnostic/release binary should not be committed: \${path.relative(root, full)}\`);
+                if (ext === '.zip') assert(full.startsWith(allowedZipPrefix), \`ZIP should not be committed outside dist/: \${path.relative(root, full)}\`);
+              }
+            }
+          }
+          walk(root);
+
+          console.log('Repository / store-readiness health checks passed.');
+          `.replace(/^ {10}/gm, '');
+          write('scripts/test-repo-health.mjs', repoHealth);
+
+          // Keep public docs truthful after the clean-history repo intentionally
+          // removed the old internal docs/ and workflow files.
+          let readme = read('README.md');
+          readme = readme
+            .replace('YO+ v0.7.0 added an interface language selector:', 'YO+ includes an interface language selector:')
+            .replace('v0.7.2 hardens this gesture for Tampermonkey/content-script cross-realm DOM events by using `composedPath()` rather than `instanceof Element`.', 'The gesture is hardened for Tampermonkey/content-script cross-realm DOM events by using `composedPath()` rather than realm-sensitive DOM constructor checks.')
+            .replace('Firefox 128+ is required by the current packaged MAIN-world exact-set bridge.', 'Firefox 140+ is required by the packaged extension so the manifest privacy declaration and supported browser APIs stay aligned.')
+            .replace('GitHub Release artifacts:', 'Suggested release artifacts:');
+
+          if (!readme.includes('## Source review / build')) {
+            readme += `\n\n## Source review / build\n\nThe repository is intentionally dependency-light: the build uses Node.js built-ins and the committed source tree. For store/source review, use **Node.js 24.x** on Windows, macOS or Linux.\n\nFrom the repository root:\n\n\`\`\`bash\nnpm run build\nnpm run check\n\`\`\`\n\n\`npm run build\` regenerates the standalone userscript plus the Chrome and Firefox extension folders. \`npm run check\` verifies that generated files match source, runs the regression suite and syntax-checks the shipped JavaScript. No minifier, bundler package, remote code download or external npm dependency is required.\n`;
+          }
+          if (!readme.includes('## Maintenance')) {
+            readme += `\n\n## Maintenance\n\nYO+ is considered feature-complete for what I wanted it to do, so I probably will not keep adding features just for the sake of it. If a browser update or a major Abitreenit change breaks the extension badly, I may try to fix it. Issues and pull requests are still welcome as reports or suggestions, but I cannot promise a response, a fix, or that a pull request will be merged.\n`;
+          }
+          write('README.md', readme);
+
+          let extensionReadme = read('extensions/README.md');
+          extensionReadme = extensionReadme
+            .replace('Firefox 128+ is required by the packaged MAIN-world bridge', 'Firefox 140+ is required by the packaged extension')
+            .replace(/\nFor AMO source review, see `\.\.\/docs\/AMO_SOURCE_BUILD\.md`\.\n/, '\nFor AMO/source review build instructions, see the **Source review / build** section in `../README.md`.\n')
+            .replace('- store copy / screenshot checklist: `../docs/STORE_SUBMISSION.md`\n- AMO source/build notes: `../docs/AMO_SOURCE_BUILD.md`\n- current audit: `../docs/AUDIT_V070.md`\n', '- source/build review instructions: `../README.md`\n');
+          write('extensions/README.md', extensionReadme);
+          NODE
+
+      - name: Regenerate distributions
+        run: npm run build
+
+      - name: Run complete validation
+        run: npm run check
+
+      - name: Commit verified fixes and remove one-time workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/final-audit-fix.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "fix: final v1.0 UI and store-readiness audit"
+          git push
