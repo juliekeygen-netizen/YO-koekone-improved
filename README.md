@@ -217,7 +217,7 @@ Generated manifest:
 
 Development install: load `extensions/firefox/manifest.json` from `about:debugging#/runtime/this-firefox`.
 
-The existing stable Gecko ID is retained for update/signing continuity. Firefox 140+ is required by the packaged extension so the manifest privacy declaration and supported browser APIs stay aligned. The manifest declares no data collection/transmission outside the extension/browser.
+The existing stable Gecko ID is retained for update/signing continuity. Firefox 142+ is required by the packaged extension so the manifest privacy declaration and supported browser APIs stay aligned. The manifest declares no data collection/transmission outside the extension/browser.
 
 Both extension directories are self-contained. Enable only one YO+ distribution on a page during normal testing/use.
 

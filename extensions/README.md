@@ -93,7 +93,7 @@ Folder: `extensions/firefox`
 2. Choose **Load Temporary Add-on...**.
 3. Select `extensions/firefox/manifest.json`.
 
-Firefox uses the same local runtime and background helper. The stable Gecko ID is preserved for signing/update continuity, Firefox 140+ is required by the packaged extension, and the manifest declares `data_collection_permissions.required: ["none"]`.
+Firefox uses the same local runtime and background helper. The stable Gecko ID is preserved for signing/update continuity, Firefox 142+ is required by the packaged extension, and the manifest declares `data_collection_permissions.required: ["none"]`.
 
 A temporary add-on disappears when Firefox restarts. Permanent normal installation requires a signed package / AMO distribution unless the Firefox build/policy allows unsigned add-ons.
 

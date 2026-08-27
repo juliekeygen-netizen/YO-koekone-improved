@@ -509,19 +509,33 @@
     section.dataset.yoplusI18nOwned = '1';
     section.dataset.yoplusLanguageSection = kind;
     if (kind === 'options') section.className = 'featured';
-    section.innerHTML = `<h${kind === 'options' ? '2' : '3'}>Kieli</h${kind === 'options' ? '2' : '3'}>
-      <label><span><b>Käyttöliittymän kieli</b><small>Muuttaa vain YO+:n lisäämät tekstit. Ylen sivun sisältöä ei käännetä.</small></span>
-        <select class="yoplus-language-select" data-yoplus-language-select aria-label="Käyttöliittymän kieli">
-          <option value="fi">Suomi</option>
-          <option value="en">English</option>
-          <option value="sv">Svenska</option>
-        </select>
-      </label>`;
-    const select = section.querySelector('select');
-    if (select) {
-      select.value = currentLanguage;
-      select.addEventListener('change', () => setLanguage(select.value));
+
+    const heading = document.createElement(kind === 'options' ? 'h2' : 'h3');
+    heading.textContent = 'Kieli';
+
+    const label = document.createElement('label');
+    const copy = document.createElement('span');
+    const title = document.createElement('b');
+    title.textContent = 'Käyttöliittymän kieli';
+    const description = document.createElement('small');
+    description.textContent = 'Muuttaa vain YO+:n lisäämät tekstit. Ylen sivun sisältöä ei käännetä.';
+    copy.append(title, description);
+
+    const select = document.createElement('select');
+    select.className = 'yoplus-language-select';
+    select.dataset.yoplusLanguageSelect = '';
+    select.setAttribute('aria-label', 'Käyttöliittymän kieli');
+    for (const [value, text] of [['fi', 'Suomi'], ['en', 'English'], ['sv', 'Svenska']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      select.appendChild(option);
     }
+
+    select.value = currentLanguage;
+    select.addEventListener('change', () => setLanguage(select.value));
+    label.append(copy, select);
+    section.append(heading, label);
     return section;
   }
 

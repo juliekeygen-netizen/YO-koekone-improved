@@ -131,13 +131,13 @@ for (const [name, manifest] of [['Chrome', chromeManifest], ['Firefox', firefoxM
 }
 
 assert(firefoxManifest.browser_specific_settings?.gecko?.id === 'yo-koekone-improved@juliekeygen-netizen', 'Firefox stable Gecko ID changed');
-assert(firefoxManifest.browser_specific_settings?.gecko?.strict_min_version === '140.0', 'Firefox minimum must match manifest privacy API support');
+assert(firefoxManifest.browser_specific_settings?.gecko?.strict_min_version === '142.0', 'Firefox minimum must match manifest privacy API support');
 assert(JSON.stringify(firefoxManifest.browser_specific_settings?.gecko?.data_collection_permissions?.required) === JSON.stringify(['none']), 'Firefox data collection declaration is not none');
 
 assert(buildScript.includes("'src/i18n.js'"), 'build does not include i18n source');
 assert(buildScript.includes("'src/i18n-nondom.js'"), 'build does not include non-DOM i18n source');
 assert(buildScript.includes("name: 'YO+ for Abitreenit'"), 'generated manifest branding is missing');
-assert(buildScript.includes("strict_min_version: '140.0'"), 'build would regenerate an outdated Firefox minimum');
+assert(buildScript.includes("strict_min_version: '142.0'"), 'build would regenerate an outdated Firefox minimum');
 assert(i18n.includes("Object.freeze(['fi', 'en', 'sv'])"), 'FI/EN/SV language allowlist missing');
 assert(i18n.includes('OWNED_PAGE_SELECTOR'), 'page localization lacks an owned-UI boundary');
 assert(nonDomI18n.includes('unknown/native Yle strings pass through unchanged'), 'non-DOM localization safety boundary is undocumented in code');

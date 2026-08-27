@@ -1,11 +1,11 @@
-// YO+ for Abitreenit v1.0.0 — standalone generated bundle
+// YO+ for Abitreenit v1.0.1 — standalone generated bundle
 // Source order: runtime -> i18n -> i18n-nondom -> settings -> settings-bridge -> settings-effects -> question-sets -> new-tabs -> subtask-links -> core -> title-sync -> study-hub -> ui-customizations -> draft-ui -> drafts -> answer-sync
 
 (() => {
   'use strict';
 
   // The release build replaces this marker with package.json's version.
-  const FEATURE_VERSION = '1.0.0';
+  const FEATURE_VERSION = '1.0.1';
   const BASE_PATH = '/abitreenit/harjoittele';
   const NS = '__YO_KOEKONE_IMPROVED_V03_RUNTIME__';
   const FEATURE_ATTR = 'data-yo-koekone-improved-v03-features';
@@ -938,19 +938,33 @@
     section.dataset.yoplusI18nOwned = '1';
     section.dataset.yoplusLanguageSection = kind;
     if (kind === 'options') section.className = 'featured';
-    section.innerHTML = `<h${kind === 'options' ? '2' : '3'}>Kieli</h${kind === 'options' ? '2' : '3'}>
-      <label><span><b>Käyttöliittymän kieli</b><small>Muuttaa vain YO+:n lisäämät tekstit. Ylen sivun sisältöä ei käännetä.</small></span>
-        <select class="yoplus-language-select" data-yoplus-language-select aria-label="Käyttöliittymän kieli">
-          <option value="fi">Suomi</option>
-          <option value="en">English</option>
-          <option value="sv">Svenska</option>
-        </select>
-      </label>`;
-    const select = section.querySelector('select');
-    if (select) {
-      select.value = currentLanguage;
-      select.addEventListener('change', () => setLanguage(select.value));
+
+    const heading = document.createElement(kind === 'options' ? 'h2' : 'h3');
+    heading.textContent = 'Kieli';
+
+    const label = document.createElement('label');
+    const copy = document.createElement('span');
+    const title = document.createElement('b');
+    title.textContent = 'Käyttöliittymän kieli';
+    const description = document.createElement('small');
+    description.textContent = 'Muuttaa vain YO+:n lisäämät tekstit. Ylen sivun sisältöä ei käännetä.';
+    copy.append(title, description);
+
+    const select = document.createElement('select');
+    select.className = 'yoplus-language-select';
+    select.dataset.yoplusLanguageSelect = '';
+    select.setAttribute('aria-label', 'Käyttöliittymän kieli');
+    for (const [value, text] of [['fi', 'Suomi'], ['en', 'English'], ['sv', 'Svenska']]) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      select.appendChild(option);
     }
+
+    select.value = currentLanguage;
+    select.addEventListener('change', () => setLanguage(select.value));
+    label.append(copy, select);
+    section.append(heading, label);
     return section;
   }
 
@@ -2409,7 +2423,7 @@
   'use strict';
 
   const APP = 'YO-koekone Improved';
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.1';
   const BASE_PATH = '/abitreenit/harjoittele';
   const ROUTE_PREFIX = '#/';
   const STATE_NS = 'yoKoekoneImproved';
@@ -4674,6 +4688,14 @@
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
   }
 
+  function replaceEscapedMarkup(target, markup) {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<body>${markup}</body>`, 'text/html');
+    const fragment = document.createDocumentFragment();
+    for (const node of [...parsed.body.childNodes]) fragment.appendChild(document.importNode(node, true));
+    target.replaceChildren(fragment);
+  }
+
   function rowLabel(entry) {
     const base = entry.label || (entry.kind === 'questions' ? `${subjectLabel(entry.subject)} – kysymysharjoittelu` : fallbackExamLabel(entry.subject, entry.exam));
     if (entry.kind === 'questions' && entry.question > 1) return `${base} — kysymys ${entry.question}`;
@@ -4792,7 +4814,7 @@
     hub.setAttribute('aria-label', 'YO+ pikavalinnat');
 
     if (!existing || signature !== lastHubSignature) {
-      hub.innerHTML = hubMarkup(library, recentLimit);
+      replaceEscapedMarkup(hub, hubMarkup(library, recentLimit));
       lastHubSignature = signature;
       hub.querySelector('.yoi-hub-settings')?.addEventListener('click', () => rt.openSettings?.());
       for (const button of hub.querySelectorAll('[data-favorite-key]')) {
@@ -4869,8 +4891,29 @@
     }
 
     const favorite = isFavorite(entry);
-    const html = `${starSvg(favorite)}<span>${favorite ? 'Poista suosikeista' : 'Lisää suosikiksi'}</span>`;
-    if (button.innerHTML !== html) button.innerHTML = html;
+    let svg = button.querySelector('svg');
+    let label = button.querySelector('span');
+    if (!svg || !label) {
+      const ns = 'http://www.w3.org/2000/svg';
+      svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '1em');
+      svg.setAttribute('height', '1em');
+      svg.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', 'm12 2.7 2.83 5.74 6.34.92-4.59 4.47 1.08 6.31L12 17.16l-5.66 2.98 1.08-6.31-4.59-4.47 6.34-.92L12 2.7Z');
+      path.setAttribute('stroke-width', '1.8');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      label = document.createElement('span');
+      button.replaceChildren(svg, label);
+    }
+    const starPath = svg.querySelector('path');
+    if (starPath) {
+      starPath.setAttribute('fill', favorite ? '#f5c84c' : 'none');
+      starPath.setAttribute('stroke', favorite ? '#f5c84c' : 'currentColor');
+    }
+    label.textContent = favorite ? 'Poista suosikeista' : 'Lisää suosikiksi';
     button.setAttribute('aria-pressed', String(favorite));
     button.setAttribute('aria-label', favorite ? 'Poista koe suosikeista' : 'Lisää koe suosikiksi');
 

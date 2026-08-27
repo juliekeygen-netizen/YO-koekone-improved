@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YO+ for Abitreenit",
   "short_name": "YO+",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unofficial study companion for Yle Abitreenit with readable routes, local draft recovery and practice-session tools.",
   "permissions": [
     "storage"
@@ -58,7 +58,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "yo-koekone-improved@juliekeygen-netizen",
-      "strict_min_version": "140.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
           "none"

@@ -345,6 +345,14 @@
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
   }
 
+  function replaceEscapedMarkup(target, markup) {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<body>${markup}</body>`, 'text/html');
+    const fragment = document.createDocumentFragment();
+    for (const node of [...parsed.body.childNodes]) fragment.appendChild(document.importNode(node, true));
+    target.replaceChildren(fragment);
+  }
+
   function rowLabel(entry) {
     const base = entry.label || (entry.kind === 'questions' ? `${subjectLabel(entry.subject)} – kysymysharjoittelu` : fallbackExamLabel(entry.subject, entry.exam));
     if (entry.kind === 'questions' && entry.question > 1) return `${base} — kysymys ${entry.question}`;
@@ -463,7 +471,7 @@
     hub.setAttribute('aria-label', 'YO+ pikavalinnat');
 
     if (!existing || signature !== lastHubSignature) {
-      hub.innerHTML = hubMarkup(library, recentLimit);
+      replaceEscapedMarkup(hub, hubMarkup(library, recentLimit));
       lastHubSignature = signature;
       hub.querySelector('.yoi-hub-settings')?.addEventListener('click', () => rt.openSettings?.());
       for (const button of hub.querySelectorAll('[data-favorite-key]')) {
@@ -540,8 +548,29 @@
     }
 
     const favorite = isFavorite(entry);
-    const html = `${starSvg(favorite)}<span>${favorite ? 'Poista suosikeista' : 'Lisää suosikiksi'}</span>`;
-    if (button.innerHTML !== html) button.innerHTML = html;
+    let svg = button.querySelector('svg');
+    let label = button.querySelector('span');
+    if (!svg || !label) {
+      const ns = 'http://www.w3.org/2000/svg';
+      svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '1em');
+      svg.setAttribute('height', '1em');
+      svg.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', 'm12 2.7 2.83 5.74 6.34.92-4.59 4.47 1.08 6.31L12 17.16l-5.66 2.98 1.08-6.31-4.59-4.47 6.34-.92L12 2.7Z');
+      path.setAttribute('stroke-width', '1.8');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      label = document.createElement('span');
+      button.replaceChildren(svg, label);
+    }
+    const starPath = svg.querySelector('path');
+    if (starPath) {
+      starPath.setAttribute('fill', favorite ? '#f5c84c' : 'none');
+      starPath.setAttribute('stroke', favorite ? '#f5c84c' : 'currentColor');
+    }
+    label.textContent = favorite ? 'Poista suosikeista' : 'Lisää suosikiksi';
     button.setAttribute('aria-pressed', String(favorite));
     button.setAttribute('aria-label', favorite ? 'Poista koe suosikeista' : 'Lisää koe suosikiksi');
 
