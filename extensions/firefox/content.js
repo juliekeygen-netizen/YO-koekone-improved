@@ -1,11 +1,11 @@
-// YO+ for Abitreenit v1.0.1 — standalone generated bundle
+// YO+ for Abitreenit v1.0.2 — standalone generated bundle
 // Source order: runtime -> i18n -> i18n-nondom -> settings -> settings-bridge -> settings-effects -> question-sets -> new-tabs -> subtask-links -> core -> title-sync -> study-hub -> ui-customizations -> draft-ui -> drafts -> answer-sync
 
 (() => {
   'use strict';
 
   // The release build replaces this marker with package.json's version.
-  const FEATURE_VERSION = '1.0.1';
+  const FEATURE_VERSION = '1.0.2';
   const BASE_PATH = '/abitreenit/harjoittele';
   const NS = '__YO_KOEKONE_IMPROVED_V03_RUNTIME__';
   const FEATURE_ATTR = 'data-yo-koekone-improved-v03-features';
@@ -2423,7 +2423,7 @@
   'use strict';
 
   const APP = 'YO-koekone Improved';
-  const VERSION = '1.0.1';
+  const VERSION = '1.0.2';
   const BASE_PATH = '/abitreenit/harjoittele';
   const ROUTE_PREFIX = '#/';
   const STATE_NS = 'yoKoekoneImproved';

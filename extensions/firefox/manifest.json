@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YO+ for Abitreenit",
   "short_name": "YO+",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Unofficial study companion for Yle Abitreenit with readable routes, local draft recovery and practice-session tools.",
   "permissions": [
     "storage"

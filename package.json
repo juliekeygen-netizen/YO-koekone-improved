@@ -1,6 +1,6 @@
 {
   "name": "yo-koekone-improved",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "YO+ for Abitreenit — an unofficial study companion with readable routes, local draft recovery and practice-session tools.",
   "scripts": {

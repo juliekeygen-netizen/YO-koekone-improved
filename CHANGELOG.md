@@ -1,3 +1,9 @@
+## 1.0.2
+
+- Replaced the popup GitHub link with a direct YO-Koekone launcher.
+- Added quick popup controls for exact question-set restoration and precise subtask links.
+- Refined the extension popup layout.
+
 ## 1.0.1
 
 - Fixed Firefox AMO compatibility metadata and removed dynamic innerHTML assignments flagged by AMO.
