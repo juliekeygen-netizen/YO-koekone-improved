@@ -1,0 +1,64 @@
+name: One-time YO+ 1.0.2 version bump
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bump-1.0.2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-build-check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Bump release version
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          if (pkg.version !== '1.0.1') throw new Error(`Expected 1.0.1, found ${pkg.version}`);
+          pkg.version = '1.0.2';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+
+          let changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          if (!/^## 1\.0\.2\b/m.test(changelog)) {
+            changelog = `## 1.0.2\n\n- Replaced the popup GitHub link with a direct YO-Koekone launcher.\n- Added quick popup controls for exact question-set restoration and precise subtask links.\n- Refined the extension popup layout.\n\n${changelog.trimStart()}`;
+          }
+          fs.writeFileSync('CHANGELOG.md', changelog.trimEnd() + '\n');
+          NODE
+      - name: Regenerate Chrome, Firefox and Tampermonkey builds
+        run: npm run build
+      - name: Validate release
+        run: npm run check
+      - name: Verify 1.0.2 everywhere
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const chrome = JSON.parse(fs.readFileSync('extensions/chrome/manifest.json', 'utf8'));
+          const firefox = JSON.parse(fs.readFileSync('extensions/firefox/manifest.json', 'utf8'));
+          const user = fs.readFileSync('YO-koekone-improved.user.js', 'utf8');
+          if (pkg.version !== '1.0.2') throw new Error('package version mismatch');
+          if (chrome.version !== '1.0.2') throw new Error('Chrome version mismatch');
+          if (firefox.version !== '1.0.2') throw new Error('Firefox version mismatch');
+          if (!/^\/\/ @version\s+1\.0\.2\s*$/m.test(user)) throw new Error('Tampermonkey version mismatch');
+          NODE
+      - name: Commit release bump and remove one-time workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/bump-1.0.2.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'release: YO+ 1.0.2'
+          git push
