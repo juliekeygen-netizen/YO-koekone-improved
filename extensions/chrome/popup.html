@@ -14,10 +14,13 @@
       <label><span>Paikalliset luonnokset<small>Suojaa tarkistamattomat vastaukset</small></span><input type="checkbox" data-setting="localDrafts"></label>
       <label><span>Luonnoksen tila<small>Näytä tallennusmerkintä tehtävissä</small></span><input type="checkbox" data-setting="draftStatus" data-draft-dependent></label>
       <label><span>Välilehtivaroitukset<small>Varoita samasta tarkistetusta vastauksesta</small></span><input type="checkbox" data-setting="crossTabWarnings"></label>
+      <div class="toggle-divider" aria-hidden="true"></div>
+      <label><span>Palauta sama satunnainen kysymyssarja<small>Säilyttää valitun kysymyssarjan F5:n ja historian jälkeen turvallisesti. Sekoita luo uuden sarjan.</small></span><input type="checkbox" data-setting="exactQuestionSetRestore"></label>
+      <label><span>Tarkat osatehtävälinkit<small>Mahdollistaa suorat reitit kuten tehtava-1.2, kun osatehtävä voidaan tunnistaa varmasti.</small></span><input type="checkbox" data-setting="subtaskLinks"></label>
     </section>
     <footer>
-      <button type="button" id="options">Kaikki asetukset</button>
-      <a href="https://github.com/juliekeygen-netizen/YO-koekone-improved" target="_blank" rel="noreferrer">GitHub</a>
+      <button type="button" id="options" class="footer-action footer-action--settings">Kaikki asetukset</button>
+      <a id="open-koekone" class="footer-action footer-action--koekone" href="https://yle.fi/abitreenit/harjoittele" target="_blank" rel="noreferrer">YO-Koekone</a>
     </footer>
   </main>
   <script src="settings-store.js"></script>
