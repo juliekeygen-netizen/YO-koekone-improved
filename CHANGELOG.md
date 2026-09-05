@@ -3,6 +3,7 @@
 - Replaced the popup GitHub link with a direct YO-Koekone launcher.
 - Added quick popup controls for exact question-set restoration and precise subtask links.
 - Refined the extension popup layout.
+- Added cross-platform store packaging that writes standards-compliant ZIP paths for Firefox AMO and Chrome Web Store uploads.
 
 ## 1.0.1
 
